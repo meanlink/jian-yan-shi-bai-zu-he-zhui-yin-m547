@@ -4,8 +4,16 @@ from redis import Redis
 from src.config.settings import REDIS_URL
 from src.models import Dataset, Job
 from src.services.business import metadata
+from src.services import handovers
 def create(db, data, user):
-    if not db.get(Dataset,data.dataset_id): raise HTTPException(404,'数据批次不存在')
+    dataset=db.get(Dataset,data.dataset_id)
+    if not dataset: raise HTTPException(404,'数据批次不存在')
+    # 与交接发起共用批号闸门：两者同时发生也按同一在途/争议状态裁定。
+    handovers.lock_batch(db, dataset.name)
+    blocking=handovers.active_for_batch(db,dataset.name)
+    if blocking:
+        label='争议中' if blocking.status=='dispute' else '在途'
+        raise HTTPException(409, f'该批次存在{label}的样品交接单 {blocking.order_no}，完成签收或裁定前不能发起新分析')
     allowed={p['key']:p for p in metadata().get('parameters',[])}
     if set(data.params)-set(allowed): raise HTTPException(422,'包含未知分析参数')
     params={k:p['default'] for k,p in allowed.items()}

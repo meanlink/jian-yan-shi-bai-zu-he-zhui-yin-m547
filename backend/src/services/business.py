@@ -1,6 +1,7 @@
 """检验失败项的Apriori频繁项集与关联规则，不作因果断言。"""
 from itertools import combinations
 import numpy as np
+from src.constants.enums import LIBRARIES
 
 ITEMS = ["heat_fail", "ph_fail", "viscosity_fail", "ash_fail", "color_fail"]
 NAMES = {"heat_fail": "热稳定失败", "ph_fail": "pH偏离", "viscosity_fail": "黏度失败", "ash_fail": "灰分失败", "color_fail": "色差失败"}
@@ -12,6 +13,12 @@ def metadata():
         "tagline": "从复检批次找出高支持度的共败组合，为原因复核提供线索。",
         "client": "恒谱材料检测室 · 9名检验员 · 240批复检记录",
         "workflow": "实验室按单项失败率开会，检验员临时筛选同批次失败项来猜测共因。",
+        "handover": {
+            "title": "样品跨库交接",
+            "summary": "复检留样从取样库转到复核库前先开交接单，整单在途、整单签收；数量差异转争议，由交接双方之外的负责人裁定后才恢复分析。",
+            "libraries": LIBRARIES,
+            "roles": [["交出经办", "开单、撤回未签收单"], ["接收员", "核对实物后整单签收或转争议"], ["负责人", "裁定争议并记录原因"]],
+        },
         "pains": ["罕见组合容易被误当规律", "高置信度可能只是后项本身常见", "复核假设没有记录支持度与提升度口径"],
         "upstream": "同一批次五项检验复核标签 assay_rechecks_202611.csv",
         "downstream": "质量工程师挑选共败组合追查制样与仪器记录，再安排独立复验",

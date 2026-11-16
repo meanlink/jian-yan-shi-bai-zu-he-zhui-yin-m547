@@ -7,12 +7,22 @@ from src.config.settings import REDIS_URL
 from src.models import Job, Dataset, Report
 from src.services.business import analyze
 from src.services.reports import deliver
+from src.services import handovers as handover_service
 from src.services.audit import record
 logging.basicConfig(level=logging.INFO)
 def execute(job_id):
     with Session() as db:
         j=db.get(Job,job_id)
         if not j or j.status!='queued':return
+        d=db.get(Dataset,j.dataset_id)
+        if d:
+            # 与交接发起共用批号闸门：在途或争议批次不出结果，任务留在队列待交接结束。
+            handover_service.lock_batch(db, d.name)
+            blocking=handover_service.active_for_batch(db,d.name)
+            if blocking:
+                db.rollback()
+                logging.info('Job %s held: batch %s has handover %s', job_id, d.name, blocking.order_no)
+                return
         j.status='running'; db.commit()
         try:
             d=db.get(Dataset,j.dataset_id)
